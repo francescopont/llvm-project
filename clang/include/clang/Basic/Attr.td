@@ -608,6 +608,27 @@ def ArmMveAlias : InheritableAttr, TargetSpecificAttr<TargetARM> {
   let Documentation = [ArmMveAliasDocs];
 }
 
+def Taffo : InheritableAttr {
+  let Spellings = [Pragma<"", taffo">];
+  let Args = [EnumArgument<"Option", "OptionType",
+                          ["target", "backtracking"],
+                          ["Target", "Backtracking"]>,
+              ExprArgument<"ValueT">, ExprArgument<"ValueBT">];
+  let AdditionalMembers = [{
+  static const char *getOptionName(int Option) {
+    switch(Option) {
+    case Target: return "target";
+    case Backtracking: return "backtracking";
+    }
+    llvm_unreachable("Unhandled Taffo option.");
+  }
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+      return;
+    }
+  }];
+  let Documentation = [Undocumented];
+}
+
 def Aligned : InheritableAttr {
   let Spellings = [GCC<"aligned">, Declspec<"align">, Keyword<"alignas">,
                    Keyword<"_Alignas">];

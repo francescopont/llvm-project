@@ -336,6 +336,13 @@ Retry:
     HandlePragmaAlign();
     return StmtEmpty();
 
+  //TAFFO custom code
+  case tok::annot_pragma_taffo:
+    ProhibitAttributes(Attrs);
+    return ParsePragmaTaffo(Stmts, StmtCtx, TrailingElseLoc, Attrs);
+  //end TAFFO custom code
+
+
   case tok::annot_pragma_weak:
     ProhibitAttributes(Attrs);
     HandlePragmaWeak();
@@ -2154,6 +2161,45 @@ StmtResult Parser::ParseReturnStatement() {
     return Actions.ActOnCoreturnStmt(getCurScope(), ReturnLoc, R.get());
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
+
+//TAFFO custom code
+StmtResult Parser::ParsePragmaTaffo(StmtVector &Stmts,
+                                       ParsedStmtContext StmtCtx,
+                                       SourceLocation *TrailingElseLoc,
+                                       ParsedAttributesWithRange &Attrs) {
+  // Create temporary attribute list.
+  ParsedAttributesWithRange TempAttrs(AttrFactory);
+  while (Tok.is(tok::annot_pragma_taffo)) {
+    TAFFOHint Hint;
+    if (!HandlePragmaTaffo(Hint))
+      continue;
+
+    if (Hint.TOptionLoc->Ident->getName() == "target" ) {
+      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.VariableNameLoc, Hint.TOptionLoc,
+                            ArgsUnion(Hint.ValueExprT)};
+      TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
+                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
+                     ParsedAttr::AS_Pragma);
+    } 
+    if (Hint.OptionLoc->Ident->getName() == "backtracking") {
+      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.VariableNameLoc, Hint.BTOptionLoc,
+                            ArgsUnion(Hint.ValueExprBT),ArgsUnion(Hint.BT)};
+      TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
+                     Hint.PragmaNameLoc->Loc, ArgHints, 5,
+                     ParsedAttr::AS_Pragma);
+    } else {
+      printf("Error, no valid option in ParseStmt\n");
+    }
+  }
+  // Get the next statement.
+  MaybeParseCXX11Attributes(Attrs);
+  StmtResult S = ParseStatementOrDeclarationAfterAttributes(
+      Stmts, StmtCtx, TrailingElseLoc, Attrs);
+  Attrs.takeAllFrom(TempAttrs);
+  return S;
+}
+//end TAFFO custom code
+
 
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                                        ParsedStmtContext StmtCtx,

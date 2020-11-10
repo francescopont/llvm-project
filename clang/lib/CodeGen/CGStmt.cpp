@@ -43,8 +43,16 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
 }
 
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
+
   assert(S && "Null statement?");
   PGO.setCurrentStmt(S);
+
+  //Taffo custom code
+  if (Attrs.size() > 0) {
+    if (Attrs[0]->getKind() == attr::Taffo)
+      addTaffoMetadata(Builder.GetInsertBlock(), Attrs);
+  }
+  //end Taffo custom code
 
   // These statements have their own debug info handling.
   if (EmitSimpleStmt(S))
@@ -2459,4 +2467,64 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   FinishFunction(CD->getBodyRBrace());
 
   return F;
+}
+
+
+void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const Attr *> TaffoAttrs) {
+  using namespace llvm;
+  if (TaffoAttrs[0]->getKind() == attr::Taffo) {
+    const Attr *t = TaffoAttrs[0];
+    const TaffoAttr *attr = (const TaffoAttr*)t;
+    ASTContext& AC = CGM.getContext();
+    BasicBlock::iterator it_start = block->getFirstInsertionPt();
+    Instruction *inst_start = &*it_start;
+    Instruction *inst_final = inst_start;
+    std::string metadata_string;
+    if (attr->getOption() == TaffoAttr::Target) {
+        metadata_string = "Taffo Target ";
+        int run = 1;
+        std::string str, strF = "";
+        clang::Expr *ValueExprT = attr->getValueT();
+        clang::Expr::EvalResult EvalResult;
+        if (ValueExprT) {
+          bool e = ValueExprT->EvaluateAsLValue(EvalResult, AC);
+          if (e) {
+            strF = EvalResult.Val.getAsString(AC, ValueExprT->getType());
+            // String comes like &foo1, cut the '&'
+            strF = strF.substr(1,std::string::npos);
+          }
+        }
+        while (run) {
+          if (inst_start != nullptr) {
+            if (isa<CallInst>(inst_start)) {
+              str = cast<CallInst>(inst_start)->getCalledFunction()->getName();
+              if (strF == str)
+              {
+                inst_final = inst_start;
+                run = 0;
+                break;
+              }
+            }
+            inst_start = inst_start->getNextNode();
+            if (inst_start != nullptr) inst_final = inst_start;
+          } else {
+          run = 0;
+          break;
+          }
+        }
+    } else if (attr->getOption() == TAFFOAttr::Main) {
+        metadata_string = "Taffo Main ";
+    }
+    LLVMContext& C = inst_final->getContext();
+    unsigned ValueInt = 0;
+    auto *ValueExpr = attr->getValue();
+    if (ValueExpr) {
+        llvm::APSInt ValueAPS = ValueExpr->EvaluateKnownConstInt(AC);
+        ValueInt = ValueAPS.getSExtValue();
+    }
+    std::string s = std::to_string(ValueInt);
+    std::string result = metadata_string + s;
+    MDNode* N = MDNode::get(C, MDString::get(C, result));
+    inst_final->setMetadata("Taffo", N);
+  }
 }

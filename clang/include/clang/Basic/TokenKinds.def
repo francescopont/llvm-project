@@ -781,6 +781,12 @@ PRAGMA_ANNOTATION(pragma_msstruct)
 // handles them.
 PRAGMA_ANNOTATION(pragma_align)
 
+//custom TAFFO code
+// Annotation for #pragma TAFFO...
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+PRAGMA_ANNOTATION(pragma_taffo)
+
 // Annotation for #pragma weak id
 // The lexer produces these so that they only take effect when the parser
 // handles them.
@@ -795,6 +801,7 @@ PRAGMA_ANNOTATION(pragma_weakalias)
 // The lexer produces these so that they only take effect when the parser
 // handles them.
 PRAGMA_ANNOTATION(pragma_redefine_extname)
+
 
 // Annotation for #pragma STDC FP_CONTRACT...
 // The lexer produces these so that they only take effect when the parser

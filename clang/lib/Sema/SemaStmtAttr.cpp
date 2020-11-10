@@ -73,6 +73,39 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       S.Context, A, DiagnosticIdentifiers.data(), DiagnosticIdentifiers.size());
 }
 
+//Taffo custom code
+static Attr *handleTaffoAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                SourceRange) {
+  IdentifierLoc *PragmaNameLoc = A.getArgAsIdent(0);
+  IdentifierLoc *VariableNameLoc = A.getArgAsIdent(1);
+  IdentifierLoc OptionLoc = A.getArgAsIdent(2);
+  Expr *ValueExpr  = nullptr;
+  Expr *BTExpr = nullptr;
+  bool PragmaT = OptionLoc->Ident->getName() == "target";
+  bool PragmaBT = OptionLoc->Ident->getName() == "backtracking";
+  
+  TAFFOAttr::OptionType Option;
+  if (PragmaT) {
+    Option = TAFFOAttr::Target;
+    ValueExpr = A.getArgAsExpr(3);
+    if (!ValueExpr) {
+      printf("Error in Sema getting N\n");
+    }
+  } else if (PragmaBT) {
+    Option = TAFFOAttr::Backtracking;
+    ValueExpr = A.getArgAsExpr(3);
+    if (!ValueExpr) {
+      printf("Backtracking with no parameter specified\n");
+    }
+    BT = A.getArgAsExpr(4);
+  } else {
+    printf("Error, no target or backtracking in semantic analysis\n");
+  }
+  
+  return TaffoAttr::CreateImplicit(S.Context, Option, ValueExpr, BTExpr, A.getRange());
+}
+//end Taffo custom code
+
 static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange) {
   IdentifierLoc *PragmaNameLoc = A.getArgAsIdent(0);
@@ -329,6 +362,10 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
+  //TAFFO custom code
+  case ParsedAttr::AT_Taffo:
+    return handleTaffoAttr(S, St, A, Range);
+  //end Taffo custom code
   case ParsedAttr::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
   case ParsedAttr::AT_OpenCLUnrollHint:

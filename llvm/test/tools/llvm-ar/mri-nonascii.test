@@ -1,4 +1,4 @@
-﻿# Test non-ascii archive members
+# Test non-ascii archive members
 
 RUN: rm -rf %t && mkdir -p %t/extracted
 

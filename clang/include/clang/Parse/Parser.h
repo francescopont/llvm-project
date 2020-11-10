@@ -23,6 +23,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/TaffoHint.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -164,6 +165,9 @@ class Parser : public CodeCompletionHandler {
   // used as type traits.
   llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind> RevertibleTypeTraits;
 
+ //TAFFO custom code
+  std::unique_ptr<PragmaHandler> TaffoHandler;
+  //end TAFFO custom code
   std::unique_ptr<PragmaHandler> AlignHandler;
   std::unique_ptr<PragmaHandler> GCCVisibilityHandler;
   std::unique_ptr<PragmaHandler> OptionsHandler;
@@ -694,6 +698,12 @@ private:
   /// Handle the annotation token produced for
   /// #pragma align...
   void HandlePragmaAlign();
+
+  /// Handle the annotation token produced for
+  /// #pragma taffo...
+  //TAFFO custom code
+  bool HandlePragmaTaffo(TaffoHint &Hint);
+  //end TAFFO custom code
 
   /// Handle the annotation token produced for
   /// #pragma clang __debug dump...
@@ -2031,6 +2041,12 @@ private:
   StmtResult ParseReturnStatement();
   StmtResult ParseAsmStatement(bool &msAsm);
   StmtResult ParseMicrosoftAsmStatement(SourceLocation AsmLoc);
+  //TAFFO custom code
+  StmtResult ParsePragmaTaffo(StmtVector &Stmts,
+                                       ParsedStmtContext Allowed,
+                                       SourceLocation *TrailingElseLoc,
+                                       ParsedAttributesWithRange &Attrs);
+  //end Taffo custom code
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts,
                                  ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,

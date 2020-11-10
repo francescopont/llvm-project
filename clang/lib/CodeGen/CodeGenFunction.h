@@ -2847,6 +2847,12 @@ public:
   //                             Statement Emission
   //===--------------------------------------------------------------------===//
 
+
+  //TAFFO custom code
+  void addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const Attr *> TaffoAttrs);
+  //end TAFFO custom code
+
+  
   /// EmitStopPoint - Emit a debug stoppoint if we are emitting debug info.
   void EmitStopPoint(const Stmt *S);
 
