@@ -77,31 +77,15 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleTaffoAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange) {
   IdentifierLoc *PragmaNameLoc = A.getArgAsIdent(0);
-  IdentifierLoc *VariableNameLoc = A.getArgAsIdent(1);
-  IdentifierLoc OptionLoc = A.getArgAsIdent(2);
-  Expr *ValueExpr  = nullptr;
-  Expr *BTExpr = nullptr;
+  IdentifierLoc OptionLoc = A.getArgAsIdent(1);
+  Expr *ValueExprV  = nullptr;
+  Expr *ValueExpr = nullptr;
   bool PragmaT = OptionLoc->Ident->getName() == "target";
   bool PragmaBT = OptionLoc->Ident->getName() == "backtracking";
-  
   TAFFOAttr::OptionType Option;
-  if (PragmaT) {
-    Option = TAFFOAttr::Target;
-    ValueExpr = A.getArgAsExpr(3);
-    if (!ValueExpr) {
-      printf("Error in Sema getting N\n");
-    }
-  } else if (PragmaBT) {
-    Option = TAFFOAttr::Backtracking;
-    ValueExpr = A.getArgAsExpr(3);
-    if (!ValueExpr) {
-      printf("Backtracking with no parameter specified\n");
-    }
-    BT = A.getArgAsExpr(4);
-  } else {
-    printf("Error, no target or backtracking in semantic analysis\n");
-  }
-  
+  Option = TAFFOAttr::Target;
+  ValueExprV = A.getArgAsExpr(2);
+  ValueExpr = A.getArgAsExpr(3);
   return TaffoAttr::CreateImplicit(S.Context, Option, ValueExpr, BTExpr, A.getRange());
 }
 //end Taffo custom code

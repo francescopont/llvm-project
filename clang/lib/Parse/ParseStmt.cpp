@@ -2175,21 +2175,19 @@ StmtResult Parser::ParsePragmaTaffo(StmtVector &Stmts,
       continue;
 
     if (Hint.TOptionLoc->Ident->getName() == "target" ) {
-      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.VariableNameLoc, Hint.TOptionLoc,
-                            ArgsUnion(Hint.ValueExprT)};
+      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.TOptionLoc,
+                            ArgsUnion(Hint.ValueExprV), ArgsUnion(Hint.ValueExprT)};
       TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
                      Hint.PragmaNameLoc->Loc, ArgHints, 4,
                      ParsedAttr::AS_Pragma);
     } 
     if (Hint.OptionLoc->Ident->getName() == "backtracking") {
-      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.VariableNameLoc, Hint.BTOptionLoc,
-                            ArgsUnion(Hint.ValueExprBT),ArgsUnion(Hint.BT)};
+      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.TBOptionLoc,
+                            ArgsUnion(Hint.ValueExprV), ArgsUnion(Hint.ValueExprTB)};
       TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
-                     Hint.PragmaNameLoc->Loc, ArgHints, 5,
+                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
                      ParsedAttr::AS_Pragma);
-    } else {
-      printf("Error, no valid option in ParseStmt\n");
-    }
+    } 
   }
   // Get the next statement.
   MaybeParseCXX11Attributes(Attrs);

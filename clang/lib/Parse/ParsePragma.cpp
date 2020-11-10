@@ -1018,7 +1018,7 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
 namespace {
   Struct PragmaTaffoInfo{
     Token PragmaName;
-    Token VariableName;
+    ArrayRef<Token> VariableNames;
     Token BTOption;
     Token TOption;
     ArrayRef<Token> BTToks;
@@ -1039,9 +1039,12 @@ bool Parser::HandlePragmaTaffo(TaffoHint &Hint) {
       Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
 
   //name of the variable
-  IdentifierInfo *VariableNameInfo = Info->VariableName.getIdentifierInfo();
-  Hint.VariableNameLoc = IdentifierLoc::create(
-      Actions.Context, Info->VariableName.getLocation(), VariableNameInfo);
+  llvm::ArrayRef<Token> VToks = Info->VariableNames;
+    PP.EnterTokenStream(VToks, /*DisableMacroExpansion=*/false,
+                        /*IsReinject=*/false);
+    ConsumeAnnotationToken();
+    Hint.ValueExprV = ParseConstantExpression().get();
+    ConsumeToken(); // Consume the constant expression eof terminator.
 
   //TOption handling
   IdentifierInfo *TOptionInfo = Info->TOption.getIdentifierInfo();
@@ -1069,8 +1072,7 @@ bool Parser::HandlePragmaTaffo(TaffoHint &Hint) {
     PP.EnterTokenStream(BTToks, /*DisableMacroExpansion=*/false,
                         /*IsReinject=*/false);
     ConsumeAnnotationToken();
-    if (Tok.is(tok::eof){
-      Hint.BT = true;
+    if (Tok.is(tok::eof)){
       ConsumeToken(); // Consume the constant expression eof terminator.
     } 
     else{
@@ -1997,12 +1999,13 @@ static void ParseAlignPragma(Preprocessor &PP, Token &FirstTok,
 }
 
 //TAFFO custom code
-static bool ParseTAffoTValue(Preprocessor &PP, Token &Tok, Token Option,
+static bool ParseTaffoTValue(Preprocessor &PP, Token &Tok, Token Option,
                     PragmaTaffoInfo &Info) {
   SmallVector<Token, 1> ValueList;
   PP.Lex(Tok);
   IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
-    
+  
+  //checking that there is an argument
   bool OptionValid = llvm::StringSwitch<bool>(OptionInfo->getName())
                             .Case("backtracking",false )
                             .Case("target", false)
@@ -2014,19 +2017,21 @@ static bool ParseTAffoTValue(Preprocessor &PP, Token &Tok, Token Option,
       EOFTok.setKind(tok::eof);
       EOFTok.setLocation(Tok.getLocation());
       ValueList.push_back(EOFTok); // Terminates expression for parsing.
-      Info.TToks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
       Info.TOption = Option;
+      Info.TToks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
+      
     }
   return OptionValid;
 }
 
 
-static bool ParseTAffoBTValue(Preprocessor &PP, Token &Tok,  Token Option,
+static bool ParseTaffoBTValue(Preprocessor &PP, Token &Tok,  Token Option,
                     PragmaTaffoInfo &Info) {
   SmallVector<Token, 1> ValueList;
   PP.Lex(Tok);
   IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
-    
+  
+  //we may not have an argument
   bool HasValue = llvm::StringSwitch<bool>(OptionInfo->getName())
                             .Case("backtracking",false )
                             .Case("target", false)
@@ -2045,6 +2050,7 @@ static bool ParseTAffoBTValue(Preprocessor &PP, Token &Tok,  Token Option,
   if(HasValue){
     return true;
   }
+  // if there is no value, since we have already read the next token, we keep on parsing it
   return llvm::StringSwitch<bool>(OptionInfo->getName())
                             .Case("backtracking",ParseTaffoBTValue(PP, Tok, Tok, *Info))
                             .Case("target", ParseTaffoTValue(PP, Tok, Tok, *Info))
@@ -2060,6 +2066,8 @@ void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
   
   SmallVector<Token, 1> TokenList;
   auto *Info = new (PP.getPreprocessorAllocator()) PragmaTaffoInfo;
+
+  
   Info.PragmaName = Tok;
 
   PP.Lex(Tok);
@@ -2068,7 +2076,15 @@ void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  Info.VariableName = Tok;
+  //variable name
+  SmallVector<Token, 1> ValueList;
+  ValueList.push_back(Tok);
+  Token EOFTok;
+  EOFTok.startToken();
+  EOFTok.setKind(tok::eof);
+  EOFTok.setLocation(Tok.getLocation());
+  ValueList.push_back(EOFTok); // Terminates expression for parsing.
+  Info.VariableNames = ValueList;
 
   PP.Lex(Tok);
   if (Tok.isNot(tok::identifier)) {
@@ -2102,7 +2118,7 @@ void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
 
   Token TaffoTok;
   TaffoTok.startToken();
-  TaffoTok.setKind(tok::annot_pragma_Taffo);
+  TaffoTok.setKind(tok::annot_pragma_taffo);
   TaffoTok.setLocation(PragmaName.getLocation());
   TaffoTok.setAnnotationEndLoc(PragmaName.getLocation());
   TaffoTok.setAnnotationValue(static_cast<void *>(Info));

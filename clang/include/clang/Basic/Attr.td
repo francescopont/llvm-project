@@ -609,11 +609,11 @@ def ArmMveAlias : InheritableAttr, TargetSpecificAttr<TargetARM> {
 }
 
 def Taffo : InheritableAttr {
-  let Spellings = [Pragma<"", taffo">];
+  let Spellings = [Pragma<"", "taffo">];
   let Args = [EnumArgument<"Option", "OptionType",
                           ["target", "backtracking"],
                           ["Target", "Backtracking"]>,
-              ExprArgument<"ValueT">, ExprArgument<"ValueBT">];
+              ExprArgument<"ValueV">, ExprArgument<"Value">];
   let AdditionalMembers = [{
   static const char *getOptionName(int Option) {
     switch(Option) {

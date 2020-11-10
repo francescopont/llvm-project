@@ -2484,12 +2484,12 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
         metadata_string = "Taffo Target ";
         int run = 1;
         std::string str, strF = "";
-        clang::Expr *ValueExprT = attr->getValueT();
+        clang::Expr *ValueExprV = attr->getValueV();
         clang::Expr::EvalResult EvalResult;
-        if (ValueExprT) {
-          bool e = ValueExprT->EvaluateAsLValue(EvalResult, AC);
+        if (ValueExprV) {
+          bool e = ValueExprV->EvaluateAsLValue(EvalResult, AC);
           if (e) {
-            strF = EvalResult.Val.getAsString(AC, ValueExprT->getType());
+            strF = EvalResult.Val.getAsString(AC, ValueExprV->getType());
             // String comes like &foo1, cut the '&'
             strF = strF.substr(1,std::string::npos);
           }
@@ -2512,8 +2512,38 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
           break;
           }
         }
-    } else if (attr->getOption() == TAFFOAttr::Main) {
-        metadata_string = "Taffo Main ";
+    } else if (attr->getOption() == TAFFOAttr::Backtracking) {
+        metadata_string = "Taffo Backtracking ";
+        int run = 1;
+        std::string str, strF = "";
+        clang::Expr *ValueExprV = attr->getValueV();
+        clang::Expr::EvalResult EvalResult;
+        if (ValueExprV) {
+          bool e = ValueExprV->EvaluateAsLValue(EvalResult, AC);
+          if (e) {
+            strF = EvalResult.Val.getAsString(AC, ValueExprV->getType());
+            // String comes like &foo1, cut the '&'
+            strF = strF.substr(1,std::string::npos);
+          }
+        }
+        while (run) {
+          if (inst_start != nullptr) {
+            if (isa<CallInst>(inst_start)) {
+              str = cast<CallInst>(inst_start)->getCalledFunction()->getName();
+              if (strF == str)
+              {
+                inst_final = inst_start;
+                run = 0;
+                break;
+              }
+            }
+            inst_start = inst_start->getNextNode();
+            if (inst_start != nullptr) inst_final = inst_start;
+          } else {
+          run = 0;
+          break;
+          }
+        }
     }
     LLVMContext& C = inst_final->getContext();
     unsigned ValueInt = 0;
