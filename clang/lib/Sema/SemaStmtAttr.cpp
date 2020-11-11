@@ -77,16 +77,21 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleTaffoAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange) {
   IdentifierLoc *PragmaNameLoc = A.getArgAsIdent(0);
-  IdentifierLoc OptionLoc = A.getArgAsIdent(1);
+  IdentifierLoc *OptionLoc = A.getArgAsIdent(1);
   Expr *ValueExprV  = nullptr;
   Expr *ValueExpr = nullptr;
   bool PragmaT = OptionLoc->Ident->getName() == "target";
   bool PragmaBT = OptionLoc->Ident->getName() == "backtracking";
-  TAFFOAttr::OptionType Option;
-  Option = TAFFOAttr::Target;
+  TaffoAttr::OptionType Option;
+  if (PragmaT) {
+    Option = TaffoAttr::Target;
+  } else if (PragmaBT) {
+    Option = TaffoAttr::Backtracking;
+  } 
+
   ValueExprV = A.getArgAsExpr(2);
   ValueExpr = A.getArgAsExpr(3);
-  return TaffoAttr::CreateImplicit(S.Context, Option, ValueExpr, BTExpr, A.getRange());
+  return TaffoAttr::CreateImplicit(S.Context, Option, ValueExprV, ValueExpr, A.getRange());
 }
 //end Taffo custom code
 

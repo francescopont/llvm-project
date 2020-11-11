@@ -12,15 +12,13 @@ namespace clang {
 struct TaffoHint {
   SourceRange Range;
   IdentifierLoc *PragmaNameLoc; // name of the pragma
-  IdentifierLoc *TOptionLoc; //target option we are applying
-  IdentifierLoc *BTOptionLoc; //backtracking option we are applying
+  IdentifierLoc *OptionLoc; //target option we are applying
   Expr *ValueExprV; //nome of the variable
-  Expr *ValueExprT;
-  Expr *ValueExprBT;
+  Expr *ValueExpr;
 
   TaffoHint()
-      : PragmaNameLoc(nullptr), VariableNameLoc(nullptr), TOptionLoc(nullptr), 
-      BTOptionLoc(nullptr), ValueExprT(nullptr), ValueExprBT(nullptr) {}
+      : PragmaNameLoc(nullptr), OptionLoc(nullptr), 
+      ValueExprV(nullptr), ValueExpr(nullptr) {}
 };
 
 }

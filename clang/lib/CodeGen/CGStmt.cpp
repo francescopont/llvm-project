@@ -49,8 +49,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
 
   //Taffo custom code
   if (Attrs.size() > 0) {
-    if (Attrs[0]->getKind() == attr::Taffo)
+    if (Attrs[0]->getKind() == attr::Taffo){
+       printf("code generation of Taffo pragma\n");
       addTaffoMetadata(Builder.GetInsertBlock(), Attrs);
+    }  
   }
   //end Taffo custom code
 
@@ -2469,10 +2471,11 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   return F;
 }
 
-
+//Taffo custom code
 void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const Attr *> TaffoAttrs) {
   using namespace llvm;
-  if (TaffoAttrs[0]->getKind() == attr::Taffo) {
+  printf("code generation of taffo pragma\n");
+  if (TaffoAttrs[0]->getKind() == attr::Taffo){
     const Attr *t = TaffoAttrs[0];
     const TaffoAttr *attr = (const TaffoAttr*)t;
     ASTContext& AC = CGM.getContext();
@@ -2496,8 +2499,8 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
         }
         while (run) {
           if (inst_start != nullptr) {
-            if (isa<CallInst>(inst_start)) {
-              str = cast<CallInst>(inst_start)->getCalledFunction()->getName();
+            if (isa<AllocaInst>(inst_start)) {
+              str = cast<AllocaInst>(inst_start)->getCalledFunction()->getName();
               if (strF == str)
               {
                 inst_final = inst_start;
@@ -2512,7 +2515,7 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
           break;
           }
         }
-    } else if (attr->getOption() == TAFFOAttr::Backtracking) {
+    } else if (attr->getOption() == TaffoAttr::Backtracking) {
         metadata_string = "Taffo Backtracking ";
         int run = 1;
         std::string str, strF = "";
@@ -2555,6 +2558,10 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
     std::string s = std::to_string(ValueInt);
     std::string result = metadata_string + s;
     MDNode* N = MDNode::get(C, MDString::get(C, result));
-    inst_final->setMetadata("Taffo", N);
+    inst_final->setMetadata("taffo", N);
   }
+  printf("end code generation of taffo pragma\n");
+
+  
+  
 }

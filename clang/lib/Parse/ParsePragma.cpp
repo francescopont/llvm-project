@@ -1016,14 +1016,10 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
 
 //Taffo custom code
 namespace {
-  Struct PragmaTaffoInfo{
+  struct PragmaTaffoInfo{
     Token PragmaName;
-    ArrayRef<Token> VariableNames;
-    Token BTOption;
-    Token TOption;
-    ArrayRef<Token> BTToks;
-    ArrayRef<Token> TToks;
-    
+    Token Option;
+    llvm::ArrayRef<Token> Toks;
   };
 } //end anonymous namespace
 
@@ -1038,53 +1034,34 @@ bool Parser::HandlePragmaTaffo(TaffoHint &Hint) {
   Hint.PragmaNameLoc = IdentifierLoc::create(
       Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
 
-  //name of the variable
-  llvm::ArrayRef<Token> VToks = Info->VariableNames;
-    PP.EnterTokenStream(VToks, /*DisableMacroExpansion=*/false,
-                        /*IsReinject=*/false);
-    ConsumeAnnotationToken();
-    Hint.ValueExprV = ParseConstantExpression().get();
-    ConsumeToken(); // Consume the constant expression eof terminator.
+  IdentifierInfo *OptionInfo = Info->Option.getIdentifierInfo();
+  Hint.OptionLoc = IdentifierLoc::create(
+      Actions.Context, Info->Option.getLocation(), OptionInfo);
 
-  //TOption handling
-  IdentifierInfo *TOptionInfo = Info->TOption.getIdentifierInfo();
-  Hint.TOptionLoc = IdentifierLoc::create(
-      Actions.Context, Info->TOption.getLocation(), TOptionInfo);
-
-  //BTOption handling
-  IdentifierInfo *BTOptionInfo = Info->BTOption.getIdentifierInfo();
-  Hint.BTOptionLoc = IdentifierLoc::create(
-      Actions.Context, Info->bTOption.getLocation(), BTOptionInfo);
-
-  bool TOption = TOptionInfo->isStr("target");
-  bool BTOption = BTOptionInfo->isStr("backtracking");
-  if (TOption) {
-    llvm::ArrayRef<Token> TToks = Info->TToks;
-    PP.EnterTokenStream(TToks, /*DisableMacroExpansion=*/false,
-                        /*IsReinject=*/false);
-    ConsumeAnnotationToken();
-    Hint.ValueExprT = ParseConstantExpression().get();
-    ConsumeToken(); // Consume the constant expression eof terminator.
-  } 
-
-  if (BTOption) {
-    llvm::ArrayRef<Token> BTToks = Info->BTToks;
-    PP.EnterTokenStream(BTToks, /*DisableMacroExpansion=*/false,
-                        /*IsReinject=*/false);
-    ConsumeAnnotationToken();
-    if (Tok.is(tok::eof)){
-      ConsumeToken(); // Consume the constant expression eof terminator.
-    } 
-    else{
-      Hint.ValueExprBT = ParseConstantExpression().get();
-      ConsumeToken(); // Consume the constant expression eof terminator.
-    }
-  }
   
+
+  llvm::ArrayRef<Token> Toks = Info->Toks;
+  PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+  ConsumeAnnotationToken();
+
+  Hint.ValueExprV = ParseConstantExpression().get();
+  Hint.ValueExpr = ParseConstantExpression().get();
+  // Tokens following an error in an ill-formed constant expression will
+  // remain in the token stream and must be removed.
+  if (Tok.isNot(tok::eof)) {
+    printf("Not EOF\n");
+    while (Tok.isNot(tok::eof))
+      ConsumeAnyToken();
+  }
+  ConsumeToken(); // Consume the constant expression eof terminator.
   Hint.Range = SourceRange(Info->PragmaName.getLocation(),
-                           Info->BTToks.back().getLocation());
+                           Info->Toks.back().getLocation());
   return true;
 }
+
+
+
+
 //end TAFFO custom code
 
 
@@ -1999,130 +1976,69 @@ static void ParseAlignPragma(Preprocessor &PP, Token &FirstTok,
 }
 
 //TAFFO custom code
-static bool ParseTaffoTValue(Preprocessor &PP, Token &Tok, Token Option,
+static bool ParseTaffoValue(Preprocessor &PP, Token &Tok,Token PragmaName,  Token Option, 
                     PragmaTaffoInfo &Info) {
   SmallVector<Token, 1> ValueList;
-  PP.Lex(Tok);
-  IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
-  
-  //checking that there is an argument
-  bool OptionValid = llvm::StringSwitch<bool>(OptionInfo->getName())
-                            .Case("backtracking",false )
-                            .Case("target", false)
-                            .Default(true);
-    if (OptionValid) {
-      ValueList.push_back(Tok);
-      Token EOFTok;
-      EOFTok.startToken();
-      EOFTok.setKind(tok::eof);
-      EOFTok.setLocation(Tok.getLocation());
-      ValueList.push_back(EOFTok); // Terminates expression for parsing.
-      Info.TOption = Option;
-      Info.TToks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
-      
-    }
-  return OptionValid;
-}
-
-
-static bool ParseTaffoBTValue(Preprocessor &PP, Token &Tok,  Token Option,
-                    PragmaTaffoInfo &Info) {
-  SmallVector<Token, 1> ValueList;
-  PP.Lex(Tok);
-  IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
-  
-  //we may not have an argument
-  bool HasValue = llvm::StringSwitch<bool>(OptionInfo->getName())
-                            .Case("backtracking",false )
-                            .Case("target", false)
-                            .Default(true);
-  if (HasValue) {
+  while (Tok.isNot(tok::eod)) {
     ValueList.push_back(Tok);
+    PP.Lex(Tok);
   }
   Token EOFTok;
   EOFTok.startToken();
   EOFTok.setKind(tok::eof);
   EOFTok.setLocation(Tok.getLocation());
   ValueList.push_back(EOFTok); // Terminates expression for parsing.
-  Info.BTOption = Option;
-  Info.BTToks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
-    
-  if(HasValue){
-    return true;
-  }
-  // if there is no value, since we have already read the next token, we keep on parsing it
-  return llvm::StringSwitch<bool>(OptionInfo->getName())
-                            .Case("backtracking",ParseTaffoBTValue(PP, Tok, Tok, *Info))
-                            .Case("target", ParseTaffoTValue(PP, Tok, Tok, *Info))
-                            .Default(false);
-    
-  
+
+  Info.Toks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
+  Info.Option = Option;
+  Info.PragmaName = PragmaName;
+  return true;
+
 
 }
 
 void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
                                          PragmaIntroducer Introducer,
                                          Token &Tok) {
-  
+  Token PragmaName = Tok;
   SmallVector<Token, 1> TokenList;
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::identifier)) {
+    printf("Error, a Taffo pragma must contain a variable identifier and an otption argument\n");
+    return;
+  }
+  Token Option = Tok;
+  IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
+    bool OptionValid = llvm::StringSwitch<bool>(OptionInfo->getName())
+                           .Case("target", true)
+                           .Case("backtracking", true)
+                           .Default(false);
+
+  if (!OptionValid) {
+    printf("Error, option not recognized for pragma taffo\n");
+    return;
+  }
+  PP.Lex(Tok);
+
   auto *Info = new (PP.getPreprocessorAllocator()) PragmaTaffoInfo;
-
-  
-  Info.PragmaName = Tok;
-
-  PP.Lex(Tok);
-  if (Tok.isNot(tok::identifier)) {
-    printf("Error, a Taffo pragma must contain a variable identifier and at least a data type pattern\n");
+  if (!ParseTaffoValue(PP, Tok, PragmaName, Option, *Info))
     return;
-  }
 
-  //variable name
-  SmallVector<Token, 1> ValueList;
-  ValueList.push_back(Tok);
-  Token EOFTok;
-  EOFTok.startToken();
-  EOFTok.setKind(tok::eof);
-  EOFTok.setLocation(Tok.getLocation());
-  ValueList.push_back(EOFTok); // Terminates expression for parsing.
-  Info.VariableNames = ValueList;
-
-  PP.Lex(Tok);
-  if (Tok.isNot(tok::identifier)) {
-    printf("Error, a Taffo pragma must contain at least a data type pattern\n");
-    return;
-  }
-
-  while(Tok.isNot(tok::eod)){
-    Token Option = Tok;
-    IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
-    
-    bool Optionvalid = llvm::StringSwitch<bool>(OptionInfo->getName())
-                            .Case("backtracking",ParseTaffoBTValue(PP, Tok, Option, *Info) )
-                            .Case("target", ParseTaffoTValue(PP, Tok, Option, *Info))
-                            .Default(false);
-    if (!OptionValid) {
-      printf("Error, option not recognized for pragma Taffo\n");
-      return;
-    }
-
-  
-    PP.Lex(Tok);
-  }
-
-  if (Tok.isNot(tok::eod)) {
-    printf("Error, extra tokens at the end of pragma Taffo\n");
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
-        << "Taffo pragma";
-    return;
-  }
 
   Token TaffoTok;
   TaffoTok.startToken();
   TaffoTok.setKind(tok::annot_pragma_taffo);
-  TaffoTok.setLocation(PragmaName.getLocation());
-  TaffoTok.setAnnotationEndLoc(PragmaName.getLocation());
+  TaffoTok.setLocation(Info->PragmaName.getLocation());
+  TaffoTok.setAnnotationEndLoc(Info->PragmaName.getLocation());
   TaffoTok.setAnnotationValue(static_cast<void *>(Info));
   TokenList.push_back(TaffoTok);
+  if (Tok.isNot(tok::eod)) {
+    printf("Error, extra tokens at the end of pragma taffo\n");
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "quality pragma";
+    return;
+  }
+
 
   
   auto TokenArray = std::make_unique<Token[]>(TokenList.size());
