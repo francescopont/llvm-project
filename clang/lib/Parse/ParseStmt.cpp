@@ -2172,21 +2172,25 @@ StmtResult Parser::ParsePragmaTaffo(StmtVector &Stmts,
   ParsedAttributesWithRange TempAttrs(AttrFactory);
   while (Tok.is(tok::annot_pragma_taffo)) {
     TaffoHint Hint;
+    printf("all fine1\n");
     if (!HandlePragmaTaffo(Hint))
       continue;
-
+    printf("all fine2\n");
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc,
                             ArgsUnion(Hint.ValueExprV), ArgsUnion(Hint.ValueExpr)};
+    printf("all fine3\n");
       TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
                      Hint.PragmaNameLoc->Loc, ArgHints, 4,
                      ParsedAttr::AS_Pragma);
   }
+  printf("all fine4\n");
   printf("end syntax analysis of taffo pragma\n");
   // Get the next statement.
   MaybeParseCXX11Attributes(Attrs);
   StmtResult S = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, Attrs);
   Attrs.takeAllFrom(TempAttrs);
+  printf("all fine5\n");
   return S;
 }
 //end TAFFO custom code

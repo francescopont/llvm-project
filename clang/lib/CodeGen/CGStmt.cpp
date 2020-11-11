@@ -15,6 +15,7 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/PrettyStackTrace.h"
@@ -24,6 +25,10 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#
+#include <iostream>
+#include <string>
+#include <stdio.h>
 
 using namespace clang;
 using namespace CodeGen;
@@ -2471,94 +2476,126 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   return F;
 }
 
+
 //Taffo custom code
 void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const Attr *> TaffoAttrs) {
   using namespace llvm;
   printf("code generation of taffo pragma\n");
-  if (TaffoAttrs[0]->getKind() == attr::Taffo){
-    const Attr *t = TaffoAttrs[0];
-    const TaffoAttr *attr = (const TaffoAttr*)t;
-    ASTContext& AC = CGM.getContext();
-    BasicBlock::iterator it_start = block->getFirstInsertionPt();
-    Instruction *inst_start = &*it_start;
-    Instruction *inst_final = inst_start;
-    std::string metadata_string;
-    if (attr->getOption() == TaffoAttr::Target) {
+  int i=0;
+  while(i < TaffoAttrs.size()){
+    if (TaffoAttrs[i]->getKind() == attr::Taffo){
+      const Attr *t = TaffoAttrs[i];
+      const TaffoAttr *attr = (const TaffoAttr*)t;
+      BasicBlock::iterator it_start = block->getFirstInsertionPt();
+      Instruction *inst_start = &*it_start;
+      Instruction *inst_final = inst_start;
+      std::string metadata_string;
+      if (attr->getOption() == TaffoAttr::Target) {
+        std::cout << "taffo target\n";
         metadata_string = "Taffo Target ";
         int run = 1;
         std::string str, strF = "";
         clang::Expr *ValueExprV = attr->getValueV();
-        clang::Expr::EvalResult EvalResult;
         if (ValueExprV) {
-          bool e = ValueExprV->EvaluateAsLValue(EvalResult, AC);
-          if (e) {
-            strF = EvalResult.Val.getAsString(AC, ValueExprV->getType());
-            // String comes like &foo1, cut the '&'
-            strF = strF.substr(1,std::string::npos);
-          }
+          std::cout << "almeno ha un valore - target\n";
+          raw_string_ostream stream(strF);
+          //Get statement from ASTMatcher and print to ostream.
+          ValueExprV->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+          //Flush ostream buffer.
+          stream.flush();
         }
+        std::cout << "ValueExpr" << strF << "\n";
         while (run) {
           if (inst_start != nullptr) {
             if (isa<AllocaInst>(inst_start)) {
-              str = cast<AllocaInst>(inst_start)->getCalledFunction()->getName();
-              if (strF == str)
-              {
+              str = cast<AllocaInst>(inst_start)->getValueName()->getKey();
+              std::cout << "key: " << str << "\n";
+              if (strF == str){
                 inst_final = inst_start;
                 run = 0;
+                std::cout << "break\n";
                 break;
               }
             }
             inst_start = inst_start->getNextNode();
             if (inst_start != nullptr) inst_final = inst_start;
           } else {
+          std::cout << "Got to the end without success- target\n";
           run = 0;
           break;
           }
         }
     } else if (attr->getOption() == TaffoAttr::Backtracking) {
-        metadata_string = "Taffo Backtracking ";
-        int run = 1;
-        std::string str, strF = "";
-        clang::Expr *ValueExprV = attr->getValueV();
-        clang::Expr::EvalResult EvalResult;
-        if (ValueExprV) {
-          bool e = ValueExprV->EvaluateAsLValue(EvalResult, AC);
-          if (e) {
-            strF = EvalResult.Val.getAsString(AC, ValueExprV->getType());
-            // String comes like &foo1, cut the '&'
-            strF = strF.substr(1,std::string::npos);
-          }
-        }
-        while (run) {
-          if (inst_start != nullptr) {
-            if (isa<CallInst>(inst_start)) {
-              str = cast<CallInst>(inst_start)->getCalledFunction()->getName();
-              if (strF == str)
-              {
-                inst_final = inst_start;
-                run = 0;
-                break;
-              }
+      std::cout << "taffo Backtracking\n";
+      metadata_string = "Taffo Backtracking ";
+      int run = 1;
+      std::string str, strF = "";
+      clang::Expr *ValueExprV = attr->getValueV();
+      clang::Expr::EvalResult EvalResult;
+      if (ValueExprV) {
+        std::cout << "almeno ha un valore - backtracking\n";
+        raw_string_ostream stream(strF);
+          //Get statement from ASTMatcher and print to ostream.
+          ValueExprV->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+          //Flush ostream buffer.
+          stream.flush();
+      }
+      std::cout << "ValueExprBack" << strF << "\n";
+      while (run) {
+        if (inst_start != nullptr) {
+          if (isa<AllocaInst>(inst_start)) {
+            str = cast<AllocaInst>(inst_start)->getValueName()->getKey();
+            std::cout << "key back: " << str << "\n";
+            if (strF == str)  {
+              inst_final = inst_start;
+              run = 0;
+              std::cout << "break back\n";
+              break;
             }
-            inst_start = inst_start->getNextNode();
-            if (inst_start != nullptr) inst_final = inst_start;
-          } else {
-          run = 0;
-          break;
           }
+          inst_start = inst_start->getNextNode();
+          if (inst_start != nullptr) inst_final = inst_start;
+        } else {
+          run = 0;
+          std::cout << "Got to the end without success- back\n";
+          break;
         }
+      }
     }
+    std::string ValueString = "";
+    clang::Expr *ValueExpr = attr->getValue();
     LLVMContext& C = inst_final->getContext();
-    unsigned ValueInt = 0;
-    auto *ValueExpr = attr->getValue();
-    if (ValueExpr) {
-        llvm::APSInt ValueAPS = ValueExpr->EvaluateKnownConstInt(AC);
-        ValueInt = ValueAPS.getSExtValue();
+    raw_string_ostream stream(ValueString);
+    //Get statement from ASTMatcher and print to ostream.
+    ValueExpr->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+    //Flush ostream buffer.
+    stream.flush();
+    ValueString = ValueString.substr(1, ValueString.size()- 2);
+    std::string result = metadata_string + ValueString;
+
+
+    MDNode* N = inst_final->getMetadata("taffo");
+    if(N != nullptr){
+          std::string string;
+          raw_string_ostream stream(string);
+          N->getOperand(0)->print(stream);
+          stream.flush();
+          std::cout << "metadata" << string;
     }
-    std::string s = std::to_string(ValueInt);
-    std::string result = metadata_string + s;
-    MDNode* N = MDNode::get(C, MDString::get(C, result));
-    inst_final->setMetadata("taffo", N);
+    
+    SmallVector<Metadata *, 32> Ops;
+    Ops.push_back(llvm::MDString::get(C, "linux"));
+    Ops.push_back(llvm::MDString::get(C, "kernel"));
+    Ops.push_back(llvm::MDString::get(C, result));
+    auto *Node =  MDTuple::get(C, Ops);
+    inst_final->setMetadata("taffo", Node);
+
+    
+    
+    }
+    
+    i++;
+
   }
   printf("end code generation of taffo pragma\n");
 
