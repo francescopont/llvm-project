@@ -1,5 +1,3 @@
-( on the branch release/10.x clang has been modified to handle also taffo pragmas)
-
 
 # The LLVM Compiler Infrastructure
 

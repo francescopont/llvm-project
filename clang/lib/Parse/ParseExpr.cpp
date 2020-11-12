@@ -215,7 +215,6 @@ ExprResult Parser::ParseConstantExpression(TypeCastState isTypeCast) {
   // C++98 and C++11 have no such rule, but this is only a defect in C++98.
   EnterExpressionEvaluationContext ConstantEvaluated(
       Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-  printf("all fine1.4\n");
   return ParseConstantExpressionInExprEvalContext(isTypeCast);
 }
 

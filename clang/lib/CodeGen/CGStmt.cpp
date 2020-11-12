@@ -55,7 +55,6 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   //Taffo custom code
   if (Attrs.size() > 0) {
     if (Attrs[0]->getKind() == attr::Taffo){
-       printf("code generation of Taffo pragma\n");
       addTaffoMetadata(Builder.GetInsertBlock(), Attrs);
     }  
   }
@@ -2491,65 +2490,36 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
       Instruction *inst_final = inst_start;
       std::string metadata_string;
       if (attr->getOption() == TaffoAttr::Target) {
-        std::cout << "taffo target\n";
+        std::cout << "taffo target pragma\n";
         metadata_string = "Taffo Target ";
-        int run = 1;
-        std::string str, strF = "";
-        clang::Expr *ValueExprV = attr->getValueV();
-        if (ValueExprV) {
-          std::cout << "almeno ha un valore - target\n";
-          raw_string_ostream stream(strF);
-          //Get statement from ASTMatcher and print to ostream.
-          ValueExprV->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
-          //Flush ostream buffer.
-          stream.flush();
-        }
-        std::cout << "ValueExpr" << strF << "\n";
-        while (run) {
-          if (inst_start != nullptr) {
-            if (isa<AllocaInst>(inst_start)) {
-              str = cast<AllocaInst>(inst_start)->getValueName()->getKey();
-              std::cout << "key: " << str << "\n";
-              if (strF == str){
-                inst_final = inst_start;
-                run = 0;
-                std::cout << "break\n";
-                break;
-              }
-            }
-            inst_start = inst_start->getNextNode();
-            if (inst_start != nullptr) inst_final = inst_start;
-          } else {
-          std::cout << "Got to the end without success- target\n";
-          run = 0;
-          break;
-          }
-        }
-    } else if (attr->getOption() == TaffoAttr::Backtracking) {
-      std::cout << "taffo Backtracking\n";
-      metadata_string = "Taffo Backtracking ";
+      } else if (attr->getOption() == TaffoAttr::Backtracking) {
+        std::cout << "taffo Backtracking option\n";
+        metadata_string = "Taffo Backtracking ";
+      }
       int run = 1;
       std::string str, strF = "";
       clang::Expr *ValueExprV = attr->getValueV();
       clang::Expr::EvalResult EvalResult;
       if (ValueExprV) {
-        std::cout << "almeno ha un valore - backtracking\n";
+        printf("getting VarName\n");
         raw_string_ostream stream(strF);
-          //Get statement from ASTMatcher and print to ostream.
-          ValueExprV->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
-          //Flush ostream buffer.
-          stream.flush();
+        //Get statement from ASTMatcher and print to ostream.
+        printf("getting VarName1\n");
+        ValueExprV->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+        printf("getting VarName2\n");
+        //Flush ostream buffer.
+        stream.flush();
+        std::cout << "VarName " << strF << "\n";
       }
-      std::cout << "ValueExprBack" << strF << "\n";
       while (run) {
         if (inst_start != nullptr) {
           if (isa<AllocaInst>(inst_start)) {
             str = cast<AllocaInst>(inst_start)->getValueName()->getKey();
-            std::cout << "key back: " << str << "\n";
+            std::cout << "key: " << str << "\n";
             if (strF == str)  {
               inst_final = inst_start;
               run = 0;
-              std::cout << "break back\n";
+              std::cout << "break\n";
               break;
             }
           }
@@ -2561,44 +2531,45 @@ void CodeGenFunction::addTaffoMetadata(llvm::BasicBlock *block, ArrayRef<const A
           break;
         }
       }
-    }
-    std::string ValueString = "";
-    clang::Expr *ValueExpr = attr->getValue();
-    LLVMContext& C = inst_final->getContext();
-    raw_string_ostream stream(ValueString);
-    //Get statement from ASTMatcher and print to ostream.
-    ValueExpr->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
-    //Flush ostream buffer.
-    stream.flush();
-    ValueString = ValueString.substr(1, ValueString.size()- 2);
-    std::string result = metadata_string + ValueString;
+    
+      //handling the OptionArg
+      std::string ValueString = "";
+      clang::Expr *ValueExpr = attr->getValue();
+      LLVMContext& C = inst_final->getContext();
+      raw_string_ostream stream(ValueString);
+      //Get statement from ASTMatcher and print to ostream.
+      ValueExpr->printPretty(stream, NULL, PrintingPolicy(LangOptions()));
+      //Flush ostream buffer.
+      stream.flush();
+      std::cout << "OptionArg " << ValueString << "\n";
+      ValueString = ValueString.substr(1, ValueString.size()- 2);
+      std::cout << "OptionArg " << ValueString << "\n";
+      std::string result = metadata_string + ValueString;
 
-
-    MDNode* N = inst_final->getMetadata("taffo");
-    if(N != nullptr){
+      //getting all the already set annotations
+      MDNode* N = inst_final->getMetadata("taffo");
+      SmallVector<Metadata *, 32> MetaVector;
+      if(N != nullptr){
+        unsigned num_operands = N->getNumOperands();
+        int j=0;
+        while(j<num_operands){
           std::string string;
           raw_string_ostream stream(string);
-          N->getOperand(0)->print(stream);
+          N->getOperand(j)->print(stream);
           stream.flush();
-          std::cout << "metadata" << string;
-    }
-    
-    SmallVector<Metadata *, 32> Ops;
-    Ops.push_back(llvm::MDString::get(C, "linux"));
-    Ops.push_back(llvm::MDString::get(C, "kernel"));
-    Ops.push_back(llvm::MDString::get(C, result));
-    auto *Node =  MDTuple::get(C, Ops);
-    inst_final->setMetadata("taffo", Node);
+          string = string.substr(2, string.size() -3);
+          MetaVector.push_back(llvm::MDString::get(C, string));
+          j++;
+        }
+      }
 
-    
-    
+      //adding this new annotation
+      MetaVector.push_back(llvm::MDString::get(C, result));
+      auto *Node =  MDTuple::get(C, MetaVector);
+      //updating the metadata
+      inst_final->setMetadata("taffo", Node);
     }
-    
     i++;
-
   }
-  printf("end code generation of taffo pragma\n");
-
-  
-  
+  printf("end code generation of taffo pragma\n"); 
 }

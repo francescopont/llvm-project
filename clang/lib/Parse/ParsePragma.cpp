@@ -1043,13 +1043,10 @@ bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
   llvm::ArrayRef<Token> Toks = Info->Toks;
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
   ConsumeAnnotationToken();
-  printf("all fine1.1\n");
   Hint.ValueExprV = ParseConstantExpression().get();
-  printf("all fine1.2\n");
   Hint.ValueExpr = ParseExpression().get();
   // Tokens following an error in an ill-formed constant expression will
   // remain in the token stream and must be removed.
-  printf("all fine1.3\n");
   if (Tok.isNot(tok::eof)) {
     printf("Not EOF\n");
     while (Tok.isNot(tok::eof))
@@ -1058,7 +1055,6 @@ bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
   ConsumeToken(); // Consume the constant expression eof terminator.
   Hint.Range = SourceRange(Info->PragmaName.getLocation(),
                            Info->Toks.back().getLocation());
-  printf("all fine1.4\n");
   return true;
 }
 
