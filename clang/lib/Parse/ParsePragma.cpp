@@ -1034,6 +1034,7 @@ bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
   Hint.PragmaNameLoc = IdentifierLoc::create(
       Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
 
+  //option
   IdentifierInfo *OptionInfo = Info->Option.getIdentifierInfo();
   Hint.OptionLoc = IdentifierLoc::create(
       Actions.Context, Info->Option.getLocation(), OptionInfo);
@@ -1043,8 +1044,17 @@ bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
   llvm::ArrayRef<Token> Toks = Info->Toks;
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
   ConsumeAnnotationToken();
-  Hint.ValueExprV = ParseConstantExpression().get();
-  Hint.ValueExpr = ParseExpression().get();
+
+  bool OptionScalar = OptionInfo->isStr("scalar");
+  bool OptionDisabled = OptionInfo->isStr("disabled");
+  bool OptionFinal = OptionInfo->isStr("final");
+  bool noOptionArg = OptionScalar || OptionDisabled || OptionFinal;
+  if(noOptionArg){
+    Hint.ValueExprV = ParseConstantExpression().get();
+  }else{
+    Hint.ValueExprV = ParseConstantExpression().get();
+    Hint.ValueExpr = ParseExpression().get();
+  }
   // Tokens following an error in an ill-formed constant expression will
   // remain in the token stream and must be removed.
   if (Tok.isNot(tok::eof)) {
@@ -2003,7 +2013,7 @@ void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
   SmallVector<Token, 1> TokenList;
   PP.Lex(Tok);
   if (Tok.isNot(tok::identifier)) {
-    printf("Error, a Taffo pragma must contain a variable identifier and an otption argument\n");
+    printf("Error, a Taffo pragma must contain at least an option argument and a variable identifier\n");
     return;
   }
   Token Option = Tok;
@@ -2011,6 +2021,11 @@ void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
     bool OptionValid = llvm::StringSwitch<bool>(OptionInfo->getName())
                            .Case("target", true)
                            .Case("backtracking", true)
+                           .Case("errtarget", true)
+                           .Case("scalar", true)
+                           .Case("error", true)
+                           .Case("disabled",true)
+                           .Case("final",true)
                            .Default(false);
 
   if (!OptionValid) {

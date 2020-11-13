@@ -2173,11 +2173,23 @@ StmtResult Parser::ParsePragmaTaffo(StmtVector &Stmts,
     TaffoHint Hint;
     if (!HandlePragmaTaffo(Hint))
       continue;
+    bool isScalar = Hint.OptionLoc->Ident->getName() == "scalar";
+    bool isDisabled = Hint.OptionLoc->Ident->getName() == "disabled";
+    bool isFinal = Hint.OptionLoc->Ident->getName() == "final";
+    bool noOptionArg = isScalar || isDisabled || isFinal;
+    if (noOptionArg){
+      ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc,
+                            ArgsUnion(Hint.ValueExprV)};
+    TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
+                     Hint.PragmaNameLoc->Loc, ArgHints, 3,
+                     ParsedAttr::AS_Pragma);
+  }else{
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc,
                             ArgsUnion(Hint.ValueExprV), ArgsUnion(Hint.ValueExpr)};
     TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
                      Hint.PragmaNameLoc->Loc, ArgHints, 4,
                      ParsedAttr::AS_Pragma);
+
   }
   // Get the next statement.
   MaybeParseCXX11Attributes(Attrs);
@@ -2185,6 +2197,7 @@ StmtResult Parser::ParsePragmaTaffo(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, Attrs);
   Attrs.takeAllFrom(TempAttrs);
   return S;
+  }
 }
 //end Taffo custom code
 
