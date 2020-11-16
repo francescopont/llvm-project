@@ -17,6 +17,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include <stdio.h>
 using namespace clang;
 
 namespace {
@@ -61,7 +62,7 @@ public:
 
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &PragmaTok) override {
-
+    printf("ciao");
     Token Tok;
     PP.LexUnexpandedToken(Tok);
     if (Tok.isNot(tok::eod))

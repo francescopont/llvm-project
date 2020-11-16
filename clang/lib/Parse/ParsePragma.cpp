@@ -38,7 +38,7 @@ struct PragmaGCCVisibilityHandler : public PragmaHandler {
 
  //Taffo custom pragma
 struct PragmaTaffoHandler : public PragmaHandler {
-  explicit PragmaTaffoHandler() : PragmaHandler("taffo") {}
+  explicit PragmaTaffoHandler() : PragmaHandler("TAFFO") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
 };
@@ -2009,6 +2009,7 @@ static bool ParseTaffoValue(Preprocessor &PP, Token &Tok,Token PragmaName,  Toke
 void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
                                          PragmaIntroducer Introducer,
                                          Token &Tok) {
+  printf("handling the wrong taffo pragma\n");
   Token PragmaName = Tok;
   SmallVector<Token, 1> TokenList;
   PP.Lex(Tok);

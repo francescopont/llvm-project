@@ -1,3 +1,21 @@
+cmake_policy (SET CMP0057 NEW)
+
+# Find LLVM (this looks for LLVMConfig.cmake somewhere in the PATH or LLVM_DIR).
+find_package(LLVM REQUIRED CONFIG)
+
+# Enable us to use the LLVM CMake modules.
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_CMAKE_DIR}")
+
+# Enable us to use add_llvm_library.
+include(AddLLVM)
+
+# Bring in the LLVM include directories.
+include_directories(${LLVM_INCLUDE_DIRS})
+
+# Bring in any definitions LLVM requires.
+add_definitions(${LLVM_DEFINITIONS})
+
+
 # If we don't need RTTI or EH, there's no reason to export anything
 # from the plugin.
 if( NOT MSVC ) # MSVC mangles symbols differently, and

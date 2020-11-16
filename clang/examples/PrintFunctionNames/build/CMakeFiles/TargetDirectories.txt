@@ -1,0 +1,11 @@
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/install/strip.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/install/local.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/install.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/PrintFunctionNames.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/intrinsics_gen.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/list_install_components.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/install-PrintFunctionNames.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/PrintFunctionNames_exports.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/CMakeFiles/install-PrintFunctionNames-stripped.dir

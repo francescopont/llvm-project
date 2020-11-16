@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC   -Wl,-rpath-link,  -Wl,-O3 -Wl,--gc-sections -shared  -o AnnotateFunctions.so CMakeFiles/AnnotateFunctions.dir/AnnotateFunctions.o -Wl,-rpath,"\$ORIGIN/../lib" 

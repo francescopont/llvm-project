@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/AnnotateFunctions/build",
+  "command": "/usr/bin/c++  -DGTEST_HAS_RTTI=0 -I/usr/local/include  -fPIC   -DBUILD_EXAMPLES -D_GNU_SOURCE -D_DEBUG -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS  -fno-exceptions -fno-rtti -o CMakeFiles/AnnotateFunctions.dir/AnnotateFunctions.o -c /mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/AnnotateFunctions/AnnotateFunctions.cpp",
+  "file": "/mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/AnnotateFunctions/AnnotateFunctions.cpp"
+}
+]
