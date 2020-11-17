@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC   -Wl,-rpath-link,  -Wl,-O3 -Wl,--gc-sections /mnt/c/Users/ponti/github/LLVM-TAFFO-pragmas/llvm-project/clang/examples/PrintFunctionNames/build/PrintFunctionNames.def -shared  -o PrintFunctionNames.so CMakeFiles/PrintFunctionNames.dir/PrintFunctionNames.o -Wl,-rpath,"\$ORIGIN/../lib" 
