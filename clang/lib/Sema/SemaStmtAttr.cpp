@@ -77,39 +77,11 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleTaffoAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange) {
   IdentifierLoc *OptionLoc = A.getArgAsIdent(1);
-  Expr *ValueExprV  = nullptr;
+  Expr *ID  = nullptr;
   Expr *ValueExpr = nullptr;
-  bool PragmaT = OptionLoc->Ident->getName() == "target";
-  bool PragmaBT = OptionLoc->Ident->getName() == "backtracking";
-  bool PragmaET = OptionLoc->Ident->getName() == "errtarget";
-  bool PragmaS = OptionLoc->Ident->getName() == "scalar";
-  bool PragmaE = OptionLoc->Ident->getName() == "error";
-  bool PragmaD = OptionLoc->Ident->getName() == "disabled";
-  bool PragmaF = OptionLoc->Ident->getName() == "final";
-  TaffoAttr::OptionType Option;
-  if(PragmaS){
-    Option = TaffoAttr::Scalar;
-  }else if (PragmaT) {
-    Option = TaffoAttr::Target;
-  } else if (PragmaBT) {
-    Option = TaffoAttr::Backtracking;
-  }else if(PragmaET){
-    Option = TaffoAttr::Errtarget;
-  }else if(PragmaE){
-    Option = TaffoAttr::Error;
-  }else if(PragmaD){
-    Option = TaffoAttr::Disabled;
-  }else if(PragmaF){
-    Option = TaffoAttr::Final;
-  }
-  if(PragmaS || PragmaD || PragmaF){
-    //no OptionArg
-    ValueExprV = A.getArgAsExpr(2);
-  }else{
-      ValueExprV = A.getArgAsExpr(2);
-      ValueExpr = A.getArgAsExpr(3);
-  }
-  return TaffoAttr::CreateImplicit(S.Context, Option, ValueExprV, ValueExpr, A.getRange());
+  ID = A.getArgAsExpr(2);
+  ValueExpr = A.getArgAsExpr(3);
+  return TaffoAttr::CreateImplicit(S.Context, ID, ValueExpr, A.getRange());
 }
 //end Taffo custom code
 

@@ -36,13 +36,13 @@ struct PragmaGCCVisibilityHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
- //Taffo custom pragma
+ //taffo custom pragma
 struct PragmaTaffoHandler : public PragmaHandler {
-  explicit PragmaTaffoHandler() : PragmaHandler("TAFFO") {}
+  explicit PragmaTaffoHandler() : PragmaHandler("taffo") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
 };
-//end of Taffo custom code
+//end of taffo custom code
 
 struct PragmaOptionsHandler : public PragmaHandler {
   explicit PragmaOptionsHandler() : PragmaHandler("options") {}
@@ -1016,15 +1016,15 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
 
 //Taffo custom code
 namespace {
-  struct PragmaTaffoInfo{
-    Token PragmaName;
-    Token Option;
-    llvm::ArrayRef<Token> Toks;
+
+struct PragmaTaffoInfo{
+    std::string PragmaName;
+    std::string annotation;
   };
-} //end anonymous namespace
+
 
 //TAFFO custom code
-bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
+bool Parser::HandlePragmaTaffo(TaffoHint &Hint) {
   assert(Tok.is(tok::annot_pragma_taffo));
   PragmaTaffoInfo *Info =
       static_cast<PragmaTaffoInfo *>(Tok.getAnnotationValue());
@@ -1034,27 +1034,16 @@ bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
   Hint.PragmaNameLoc = IdentifierLoc::create(
       Actions.Context, Info->PragmaName.getLocation(), PragmaNameInfo);
 
-  //option
-  IdentifierInfo *OptionInfo = Info->Option.getIdentifierInfo();
-  Hint.OptionLoc = IdentifierLoc::create(
-      Actions.Context, Info->Option.getLocation(), OptionInfo);
 
-  
-
-  llvm::ArrayRef<Token> Toks = Info->Toks;
+  llvm::ArrayRef<Token> Toks = Info->annotation;
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
   ConsumeAnnotationToken();
 
-  bool OptionScalar = OptionInfo->isStr("scalar");
-  bool OptionDisabled = OptionInfo->isStr("disabled");
-  bool OptionFinal = OptionInfo->isStr("final");
-  bool noOptionArg = OptionScalar || OptionDisabled || OptionFinal;
-  if(noOptionArg){
-    Hint.ValueExprV = ParseConstantExpression().get();
-  }else{
-    Hint.ValueExprV = ParseConstantExpression().get();
-    Hint.ValueExpr = ParseExpression().get();
-  }
+  //parsing ID
+  Hint.ID = ParseConstantExpression().get();
+  //parsing actual annotation
+  Hint.ValueExpr = ParseExpression().get();
+  
   // Tokens following an error in an ill-formed constant expression will
   // remain in the token stream and must be removed.
   if (Tok.isNot(tok::eof)) {
@@ -1064,7 +1053,7 @@ bool Parser:: HandlePragmaTaffo(TaffoHint &Hint) {
   }
   ConsumeToken(); // Consume the constant expression eof terminator.
   Hint.Range = SourceRange(Info->PragmaName.getLocation(),
-                           Info->Toks.back().getLocation());
+                           Info->annotation.back().getLocation());
   return true;
 }
 
@@ -1985,58 +1974,80 @@ static void ParseAlignPragma(Preprocessor &PP, Token &FirstTok,
 }
 
 //TAFFO custom code
-static bool ParseTaffoValue(Preprocessor &PP, Token &Tok,Token PragmaName,  Token Option, 
-                    PragmaTaffoInfo &Info) {
-  SmallVector<Token, 1> ValueList;
-  while (Tok.isNot(tok::eod)) {
-    ValueList.push_back(Tok);
+static void ParseTaffoValue(Preprocessor &PP, Token &Tok, PragmaTaffoInfo* Info) {
+
+    //parsing PragmaName
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_missing_argument) << "taffo";
+      return;
+    }
+    IdentifierInfo *PragmaName = Tok.getIdentifierInfo();
+    Info->PragmaName = PragmaName->getName().str();
     PP.Lex(Tok);
+
+    //parsing ID
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_missing_argument) << "taffo";
+      return;
+    }
+    IdentifierInfo *ID = Tok.getIdentifierInfo();
+    std::string ID = ID->getName().str();
+    PP.Lex(Tok);
+
+
+    //parsing the actual annotation
+    if (Tok.is(tok::eod)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_missing_argument) << "taffo";
+      return;
+    }
+    std::string ann = Tok.getLiteralData();
+    ann = ann.substr(0, ann.find("\n"));  
+    bool in = false;
+    std::string parsed = "";
+    int pos =0;
+    while (pos < ann.size()){
+      if(ann[pos] == '\"'){
+        in = !in;
+      }
+      else{
+        if(!in && ann[pos] != ' ' ){
+          PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument) << "taffo";
+          return;
+        }
+        if(in){
+          parsed.push_back(ann[pos]);
+        }
+      }
+      pos++;
+    }
+    if (in){
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument) << "taffo";
+      return;
+    }
+    
+    PP.Lex(Tok);
+
+
+    // extra tokens at the end of taffo pragma are added in case macros are used
+    std::string extra = "";
+    if (Tok.isNot(tok::eod)) {
+      while (Tok.isNot(tok::eod)){
+        PP.Lex(Tok);
+      }
+    }
+
+    Info->annotation = ID ++ " " ++ parsed;
   }
-  Token EOFTok;
-  EOFTok.startToken();
-  EOFTok.setKind(tok::eof);
-  EOFTok.setLocation(Tok.getLocation());
-  ValueList.push_back(EOFTok); // Terminates expression for parsing.
-
-  Info.Toks = llvm::makeArrayRef(ValueList).copy(PP.getPreprocessorAllocator());
-  Info.Option = Option;
-  Info.PragmaName = PragmaName;
-  return true;
-
-
-}
 
 void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
                                          PragmaIntroducer Introducer,
                                          Token &Tok) {
-  printf("handling the wrong taffo pragma\n");
   Token PragmaName = Tok;
   SmallVector<Token, 1> TokenList;
-  PP.Lex(Tok);
-  if (Tok.isNot(tok::identifier)) {
-    printf("Error, a Taffo pragma must contain at least an option argument and a variable identifier\n");
-    return;
-  }
-  Token Option = Tok;
-  IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
-    bool OptionValid = llvm::StringSwitch<bool>(OptionInfo->getName())
-                           .Case("target", true)
-                           .Case("backtracking", true)
-                           .Case("errtarget", true)
-                           .Case("scalar", true)
-                           .Case("error", true)
-                           .Case("disabled",true)
-                           .Case("final",true)
-                           .Default(false);
-
-  if (!OptionValid) {
-    printf("Error, option not recognized for pragma taffo\n");
-    return;
-  }
-  PP.Lex(Tok);
+  Token Tok;
 
   auto *Info = new (PP.getPreprocessorAllocator()) PragmaTaffoInfo;
-  if (!ParseTaffoValue(PP, Tok, PragmaName, Option, *Info))
+  if (!ParseTaffoValue(PP, Tok, Info))
     return;
 
 
@@ -2047,15 +2058,7 @@ void PragmaTaffoHandler::HandlePragma(Preprocessor &PP,
   TaffoTok.setAnnotationEndLoc(Info->PragmaName.getLocation());
   TaffoTok.setAnnotationValue(static_cast<void *>(Info));
   TokenList.push_back(TaffoTok);
-  if (Tok.isNot(tok::eod)) {
-    printf("Error, extra tokens at the end of pragma taffo\n");
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
-        << "quality pragma";
-    return;
-  }
 
-
-  
   auto TokenArray = std::make_unique<Token[]>(TokenList.size());
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),

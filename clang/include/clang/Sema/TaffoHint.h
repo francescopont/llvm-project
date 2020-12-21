@@ -12,13 +12,12 @@ namespace clang {
 struct TaffoHint {
   SourceRange Range;
   IdentifierLoc *PragmaNameLoc; // name of the pragma
-  IdentifierLoc *OptionLoc; //target option we are applying
-  Expr *ValueExprV; //nome of the variable
+  Expr *ID; // ID name
   Expr *ValueExpr;
 
   TaffoHint()
-      : PragmaNameLoc(nullptr), OptionLoc(nullptr), 
-      ValueExprV(nullptr), ValueExpr(nullptr) {}
+      : PragmaNameLoc(nullptr),  
+      ID(nullptr),  ValueExpr(nullptr) {}
 };
 
 }

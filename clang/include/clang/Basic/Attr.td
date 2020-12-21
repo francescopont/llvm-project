@@ -610,27 +610,7 @@ def ArmMveAlias : InheritableAttr, TargetSpecificAttr<TargetARM> {
 
 def Taffo : InheritableAttr {
   let Spellings = [Pragma<"", "taffo">];
-  let Args = [EnumArgument<"Option", "OptionType",
-                          ["target", "backtracking", "errtarget", "scalar", "error", "disabled", "final"],
-                          ["Target", "Backtracking", "Errtarget", "Scalar", "Error", "Disabled", "Final"]>,
-              ExprArgument<"ValueV">, ExprArgument<"Value">];
-  let AdditionalMembers = [{
-  static const char *getOptionName(int Option) {
-    switch(Option) {
-    case Target: return "target";
-    case Backtracking: return "backtracking";
-    case Errtarget: return "errtarget";
-    case Scalar: return "scalar";
-    case Error: return "error";
-    case Disabled: return "disabled";
-    case Final: return "final";
-    }
-    llvm_unreachable("Unhandled Taffo option.");
-  }
-    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-      return;
-    }
-  }];
+  let Args = [ExprArgument<"ID">, ExprArgument<"ValueExpr">];
   let Documentation = [Undocumented];
 }
 
